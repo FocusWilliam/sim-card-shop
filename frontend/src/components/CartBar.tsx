@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 
@@ -26,12 +27,12 @@ export default function CartBar() {
             </span>
           </div>
         </div>
-        <a
+        <Link
           href="/cart"
           className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-2.5 rounded-lg font-medium transition-colors"
         >
           Checkout
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { ordersApi } from '@/lib/api';
@@ -50,18 +51,18 @@ export default function CartPage() {
           keys after payment.
         </p>
         <div className="mt-6 flex gap-3 justify-center">
-          <a
+          <Link
             href={`/orders?q=${orderNo}`}
             className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors"
           >
             View Order
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="border border-gray-300 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
             Continue Shopping
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -75,12 +76,12 @@ export default function CartPage() {
         <div className="text-center py-16 text-gray-400">
           <div className="text-5xl mb-4">🛒</div>
           <p>Your cart is empty</p>
-          <a
+          <Link
             href="/"
             className="inline-block mt-4 text-primary-600 hover:underline"
           >
             Browse plans →
-          </a>
+          </Link>
         </div>
       ) : (
         <>
