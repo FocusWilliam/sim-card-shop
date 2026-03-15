@@ -82,7 +82,7 @@ export default function HomePage() {
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="text-2xl mb-1">💬</div>
           <div className="font-medium text-gray-700">24/7 Support</div>
-          <div className="text-xs mt-1">We're here to help</div>
+          <div className="text-xs mt-1">We&apos;re here to help</div>
         </div>
       </div>
 

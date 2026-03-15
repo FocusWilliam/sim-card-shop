@@ -29,6 +29,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (searchParams.get('q')) handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const statusBadge = (status: string) => {
