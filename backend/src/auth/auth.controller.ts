@@ -25,7 +25,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
-  getProfile(@Request() req: any) {
+  getProfile(@Request() req: { user: { sub: string } }) {
     return this.authService.getProfile(req.user.sub);
   }
 }
