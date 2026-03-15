@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../common/prisma.service';
+import { EmailService } from '../common/email.service';
 import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
   private stripe: Stripe;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+  ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
   }
 
@@ -94,7 +98,7 @@ export class PaymentsService {
   private async fulfillOrder(orderId: string) {
     const order = await this.prisma.order.findUniqueOrThrow({
       where: { id: orderId },
-      include: { orderItems: true },
+      include: { orderItems: { include: { product: true } } },
     });
 
     if (order.status !== OrderStatus.PENDING) return;
@@ -107,6 +111,8 @@ export class PaymentsService {
       });
 
       // Assign card keys for each item
+      const allAssignedCards: { cardNumber: string; cardSecret: string }[] = [];
+
       for (const item of order.orderItems) {
         const cards = await tx.cardInventory.findMany({
           where: { productId: item.productId, isSold: false },
@@ -122,13 +128,36 @@ export class PaymentsService {
               soldAt: new Date(),
             },
           });
-
-          // Update order to fulfilled
-          await tx.order.update({
-            where: { id: orderId },
-            data: { status: OrderStatus.FULFILLED },
-          });
+          allAssignedCards.push(
+            ...cards.map((c) => ({
+              cardNumber: c.cardNumber,
+              cardSecret: c.cardSecret,
+            })),
+          );
         }
+      }
+
+      // Update order to fulfilled
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.FULFILLED },
+      });
+
+      // Send email notification
+      if (order.contactEmail && allAssignedCards.length > 0) {
+        this.email
+          .sendOrderFulfilled({
+            orderNo: order.orderNo,
+            contactEmail: order.contactEmail,
+            items: order.orderItems.map((i) => ({
+              name: i.product.name,
+              quantity: i.quantity,
+              subtotal: Number(i.subtotal),
+            })),
+            totalAmount: Number(order.totalAmount),
+            cardKeys: allAssignedCards,
+          })
+          .catch((err) => console.error('Email send error:', err));
       }
     });
   }

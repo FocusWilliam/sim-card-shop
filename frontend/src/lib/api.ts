@@ -54,6 +54,7 @@ export const ordersApi = {
   create: (data: { items: { productId: string; quantity: number }[]; contactEmail?: string }) =>
     api.post('/orders', data),
   get: (orderNo: string) => api.get(`/orders/${orderNo}`),
+  findByEmail: (email: string) => api.get(`/orders/lookup/email?email=${encodeURIComponent(email)}`),
 };
 
 export const paymentsApi = {

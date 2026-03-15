@@ -69,6 +69,25 @@ export class OrdersService {
     return order;
   }
 
+  async findByEmail(email: string) {
+    if (!email) throw new NotFoundException('Email required');
+    const orders = await this.prisma.order.findMany({
+      where: { contactEmail: { equals: email, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        orderItems: { include: { product: true } },
+        cardInventory: {
+          select: {
+            cardNumber: true,
+            cardSecret: true,
+            productId: true,
+          },
+        },
+      },
+    });
+    return orders;
+  }
+
   /**
    * Called after payment confirmation (e.g., from Stripe/Alipay webhook).
    * Assigns card keys to the order.

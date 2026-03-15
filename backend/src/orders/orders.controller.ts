@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -27,6 +28,12 @@ export class OrdersController {
   @ApiOperation({ summary: 'Query order by order number' })
   findByOrderNo(@Param('orderNo') orderNo: string) {
     return this.ordersService.findByOrderNo(orderNo);
+  }
+
+  @Get('lookup/email')
+  @ApiOperation({ summary: 'Lookup orders by email address' })
+  findByEmail(@Query('email') email: string) {
+    return this.ordersService.findByEmail(email);
   }
 
   @Post(':id/fulfill')
