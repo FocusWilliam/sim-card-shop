@@ -4,14 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
-import { ordersApi } from '@/lib/api';
+import { ordersApi, paymentsApi } from '@/lib/api';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart, totalAmount } =
     useCartStore();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [orderNo, setOrderNo] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
@@ -28,34 +30,106 @@ export default function CartPage() {
         contactEmail: email || undefined,
       });
       setOrderNo(res.data.orderNo);
+      setOrderId(res.data.id);
       clearCart();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create order');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message || 'Failed to create order');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Order success state
-  if (orderNo) {
+  const handleStripePayment = async () => {
+    if (!orderId) return;
+    setPaying(true);
+    setError(null);
+    try {
+      const baseUrl = window.location.origin;
+      const res = await paymentsApi.checkout(
+        orderId,
+        `${baseUrl}/orders`,
+        `${baseUrl}/cart`,
+      );
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message || 'Payment service unavailable. Use test payment instead.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleTestPayment = async () => {
+    if (!orderId) return;
+    setPaying(true);
+    setError(null);
+    try {
+      await paymentsApi.simulate(orderId);
+      setOrderId(null); // Clear to show success
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr.response?.data?.message || 'Test payment failed');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Order created - show payment options
+  if (orderNo && orderId) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <div className="text-5xl mb-4">🎉</div>
+        <div className="text-5xl mb-4">🛒</div>
         <h1 className="text-2xl font-bold text-gray-900">Order Created!</h1>
-        <p className="text-gray-500 mt-2">Your order number is:</p>
+        <p className="text-gray-500 mt-2">Order number:</p>
         <p className="text-lg font-mono bg-gray-100 rounded-lg py-3 px-4 mt-3 select-all">
           {orderNo}
         </p>
-        <p className="text-sm text-gray-400 mt-4">
-          Save this number to check your order status and retrieve your card
-          keys after payment.
-        </p>
+
+        {error && (
+          <div className="mt-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-3">
+          <button
+            onClick={handleStripePayment}
+            disabled={paying}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
+          >
+            {paying ? 'Redirecting...' : '💳 Pay with Stripe'}
+          </button>
+          <button
+            onClick={handleTestPayment}
+            disabled={paying}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white py-3 rounded-lg font-medium transition-colors"
+          >
+            {paying ? 'Processing...' : '🧪 Test Payment (instant)'}
+          </button>
+          <p className="text-xs text-gray-400 mt-2">
+            Test payment skips Stripe and immediately fulfills the order with card keys.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment complete - show success
+  if (orderNo && !orderId) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-16 text-center">
+        <div className="text-5xl mb-4">🎉</div>
+        <h1 className="text-2xl font-bold text-gray-900">Payment Complete!</h1>
+        <p className="text-gray-500 mt-2">Your card keys are ready.</p>
         <div className="mt-6 flex gap-3 justify-center">
           <Link
             href={`/orders?q=${orderNo}`}
             className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors"
           >
-            View Order
+            View Card Keys
           </Link>
           <Link
             href="/"

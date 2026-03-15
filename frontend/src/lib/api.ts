@@ -56,6 +56,13 @@ export const ordersApi = {
   get: (orderNo: string) => api.get(`/orders/${orderNo}`),
 };
 
+export const paymentsApi = {
+  checkout: (orderId: string, successUrl: string, cancelUrl: string) =>
+    api.post(`/payments/checkout/${orderId}`, { successUrl, cancelUrl }),
+  simulate: (orderId: string) =>
+    api.post(`/payments/simulate/${orderId}`),
+};
+
 export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post('/auth/login', data),

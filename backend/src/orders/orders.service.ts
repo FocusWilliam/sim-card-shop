@@ -16,21 +16,9 @@ export class OrdersService {
   ) {}
 
   async create(dto: CreateOrderDto, userId?: string) {
-    // Validate stock for each item
-    for (const item of dto.items) {
-      const available = await this.prisma.cardInventory.count({
-        where: { productId: item.productId, isSold: false },
-      });
-      if (available < item.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for product ${item.productId}`,
-        );
-      }
-    }
-
     // Create order with items in a transaction
     const order = await this.prisma.$transaction(async (tx) => {
-      // Calculate totals
+      // Calculate totals and validate products exist
       const orderItems = await Promise.all(
         dto.items.map(async (item) => {
           const product = await tx.product.findUniqueOrThrow({
