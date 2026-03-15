@@ -1,5 +1,6 @@
 # ========== Development ==========
 FROM node:20-alpine AS development
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,6 +14,7 @@ CMD ["npm", "run", "start:dev"]
 
 # ========== Build ==========
 FROM node:20-alpine AS build
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY package*.json ./
@@ -24,6 +26,7 @@ RUN npm run build
 
 # ========== Production ==========
 FROM node:20-alpine AS production
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY package*.json ./
