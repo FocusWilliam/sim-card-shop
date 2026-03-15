@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ordersApi } from '@/lib/api';
 
-export default function OrdersPage() {
+function OrdersContent() {
   const searchParams = useSearchParams();
   const [orderNo, setOrderNo] = useState(searchParams.get('q') || '');
   const [order, setOrder] = useState<any>(null);
@@ -141,5 +141,13 @@ export default function OrdersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div className="max-w-2xl mx-auto px-4 py-8 text-center text-gray-400">Loading...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }
