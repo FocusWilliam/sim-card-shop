@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== User & Auth ====================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nickname  String?
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("users")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+// ==================== Product (SIM Card Plans) ====================
+
+model Product {
+  id            String        @id @default(uuid())
+  name          String        // e.g. "12G / 15天"
+  nameEn        String?       @map("name_en") // e.g. "12G / 15 days"
+  description   String?
+  dataAmount    String        @map("data_amount") // e.g. "12G"
+  validityDays  Int           @map("validity_days") // e.g. 15
+  price         Decimal       @db.Decimal(10, 2) // current price
+  originalPrice Decimal?      @map("original_price") @db.Decimal(10, 2) // strikethrough price
+  currency      String        @default("CNY")
+  stock         Int           @default(0)
+  status        ProductStatus @default(ACTIVE)
+  sortOrder     Int           @default(0) @map("sort_order")
+  imageUrl      String?       @map("image_url")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  cardInventory CardInventory[]
+  orderItems    OrderItem[]
+
+  @@map("products")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  SOLD_OUT
+}
+
+// ==================== Card Inventory (卡密库存) ====================
+
+model CardInventory {
+  id         String  @id @default(uuid())
+  productId  String  @map("product_id")
+  cardNumber String  @map("card_number") // 卡号
+  cardSecret String  @map("card_secret") // 卡密
+  isSold     Boolean @default(false) @map("is_sold")
+  orderId    String? @map("order_id")
+
+  soldAt    DateTime? @map("sold_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  @@index([productId, isSold])
+  @@map("card_inventory")
+}
+
+// ==================== Order ====================
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNo       String        @unique @map("order_no") // e.g. "ORD-20240101-XXXX"
+  userId        String?       @map("user_id")
+  contactEmail  String?       @map("contact_email")
+  contactPhone  String?       @map("contact_phone")
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(10, 2)
+  currency      String        @default("CNY")
+  status        OrderStatus   @default(PENDING)
+  paymentMethod String?       @map("payment_method") // stripe / alipay / wechat
+  paymentId     String?       @map("payment_id") // third-party payment ID
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user          User?         @relation(fields: [userId], references: [id])
+  orderItems    OrderItem[]
+  cardInventory CardInventory[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED // 卡密已发放
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String  @map("order_id")
+  productId String  @map("product_id")
+  quantity  Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
