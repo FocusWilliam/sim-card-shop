@@ -71,3 +71,11 @@ export const authApi = {
     api.post('/auth/register', data),
   profile: () => api.get('/auth/profile'),
 };
+
+export const adminApi = {
+  dashboard: () => api.get('/admin/dashboard'),
+  inventory: () => api.get('/admin/inventory'),
+  orders: (params?: { page?: number; limit?: number; status?: string; email?: string }) =>
+    api.get('/admin/orders', { params }),
+  customers: () => api.get('/admin/customers'),
+};
