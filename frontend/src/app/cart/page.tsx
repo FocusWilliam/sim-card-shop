@@ -18,6 +18,10 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address. Card keys will be sent to this email.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -27,7 +31,7 @@ export default function CartPage() {
           productId: i.product.id,
           quantity: i.quantity,
         })),
-        contactEmail: email || undefined,
+        contactEmail: email,
       });
       setOrderNo(res.data.orderNo);
       setOrderId(res.data.id);
@@ -214,7 +218,7 @@ export default function CartPage() {
           {/* Contact Info */}
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Email (for card key delivery)
+              Email <span className="text-red-500">*</span> <span className="text-gray-400 font-normal">(card keys will be sent here)</span>
             </label>
             <input
               type="email"

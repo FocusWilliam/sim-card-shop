@@ -28,10 +28,9 @@ export class CreateOrderDto {
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ example: 'buyer@example.com', description: 'Required for card key delivery' })
   @IsEmail()
-  contactEmail?: string;
+  contactEmail: string;
 
   @ApiPropertyOptional()
   @IsOptional()
