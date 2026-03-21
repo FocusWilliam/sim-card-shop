@@ -30,12 +30,12 @@ services:
   backend:
     image: ghcr.io/focuswilliam/sim-card-shop-backend:production
     container_name: simcard_backend
+    env_file: .env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://simcard:SimCard_Prod_2025!@postgres:5432/simcard_shop
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: sc-jwt-prod-a7f3b2e1d9c8
       PORT: 3001
       FRONTEND_URL: '*'
     depends_on:
