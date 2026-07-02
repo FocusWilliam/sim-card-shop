@@ -113,6 +113,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Deploy via SSH
@@ -121,18 +124,24 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          # Fail the job if any command in the script fails (no more false green)
+          script_stop: true
           script: |
+            set -euo pipefail
             cd /opt/sim-card-shop
+
+            # Git may refuse the repo if it is owned by another user
+            git config --global --add safe.directory /opt/sim-card-shop
             git pull origin main
 
-            # Login to GHCR and pull pre-built images (no local build needed)
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u focuswilliam --password-stdin
-            docker compose -f docker-compose.pull.yml pull
+            # Log in to GHCR with the workflow's own token (no long-lived secret)
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Start/restart services
+            # Pull pre-built images and (re)start services
+            docker compose -f docker-compose.pull.yml pull
             docker compose -f docker-compose.pull.yml up -d --remove-orphans
 
-            # Run migrations if needed
+            # Apply schema changes if any
             sleep 10
             docker exec simcard_backend npx prisma db push --skip-generate 2>/dev/null || true
 
