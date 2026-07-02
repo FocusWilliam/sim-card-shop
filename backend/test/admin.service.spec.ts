@@ -71,11 +71,18 @@ describe('AdminService', () => {
 
   describe('getInventory', () => {
     it('should return per-product inventory with sold/available counts', async () => {
-      (prisma.cardInventory.count as jest.Mock)
-        .mockResolvedValueOnce(5)   // p1 sold
-        .mockResolvedValueOnce(15)  // p1 available
-        .mockResolvedValueOnce(8)   // p2 sold
-        .mockResolvedValueOnce(12); // p2 available
+      // getInventory issues its cardInventory.count queries via Promise.all, so
+      // call order is not guaranteed. Resolve based on the query args instead.
+      const counts: Record<string, number> = {
+        'p1:true': 5, // p1 sold
+        'p1:false': 15, // p1 available
+        'p2:true': 8, // p2 sold
+        'p2:false': 12, // p2 available
+      };
+      (prisma.cardInventory.count as jest.Mock).mockImplementation(
+        ({ where }: { where: { productId: string; isSold: boolean } }) =>
+          Promise.resolve(counts[`${where.productId}:${where.isSold}`]),
+      );
 
       const result = await service.getInventory();
 
@@ -85,6 +92,14 @@ describe('AdminService', () => {
           name: '3G / 7天',
           soldCards: 5,
           availableCards: 15,
+          totalCards: 20,
+        }),
+      );
+      expect(result[1]).toEqual(
+        expect.objectContaining({
+          name: '12G / 15天',
+          soldCards: 8,
+          availableCards: 12,
           totalCards: 20,
         }),
       );

@@ -18,7 +18,9 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
-    if (!email || !email.includes('@')) {
+    // Mirror the backend @IsEmail() rule so we don't send orders the API rejects.
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email.trim())) {
       setError('Please enter a valid email address. Card keys will be sent to this email.');
       return;
     }
@@ -31,7 +33,7 @@ export default function CartPage() {
           productId: i.product.id,
           quantity: i.quantity,
         })),
-        contactEmail: email,
+        contactEmail: email.trim(),
       });
       setOrderNo(res.data.orderNo);
       setOrderId(res.data.id);

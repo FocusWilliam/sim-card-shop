@@ -2,9 +2,39 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { CreateProductDto, UpdateProductDto, QueryProductDto } from './products.dto';
-import { ProductStatus } from '@prisma/client';
+import { ProductStatus, Prisma } from '@prisma/client';
 
 const CACHE_TTL = 300; // 5 minutes
+
+interface ProductListItem {
+  id: string;
+  name: string;
+  nameEn: string | null;
+  dataAmount: string;
+  validityDays: number;
+  price: Prisma.Decimal;
+  originalPrice: Prisma.Decimal | null;
+  currency: string;
+  stock: number;
+  status: ProductStatus;
+  imageUrl: string | null;
+}
+
+interface ProductListResult {
+  items: ProductListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+type ProductWithCount = Prisma.ProductGetPayload<{
+  include: { _count: { select: { cardInventory: true } } };
+}>;
+
+type ProductDetailResult = ProductWithCount & { availableStock: number };
 
 @Injectable()
 export class ProductsService {
@@ -13,12 +43,12 @@ export class ProductsService {
     private readonly redis: RedisService,
   ) {}
 
-  async findAll(query: QueryProductDto) {
+  async findAll(query: QueryProductDto): Promise<ProductListResult> {
     const { page = 1, limit = 20, status } = query;
     const cacheKey = `products:list:${page}:${limit}:${status || 'all'}`;
 
     // Check cache
-    const cached = await this.redis.getJson(cacheKey);
+    const cached = await this.redis.getJson<ProductListResult>(cacheKey);
     if (cached) return cached;
 
     const where = {
@@ -65,7 +95,7 @@ export class ProductsService {
 
   async findOne(id: string) {
     const cacheKey = `products:${id}`;
-    const cached = await this.redis.getJson(cacheKey);
+    const cached = await this.redis.getJson<ProductDetailResult>(cacheKey);
     if (cached) return cached;
 
     const product = await this.prisma.product.findUnique({
@@ -81,7 +111,7 @@ export class ProductsService {
 
     if (!product) throw new NotFoundException('Product not found');
 
-    const result = {
+    const result: ProductDetailResult = {
       ...product,
       availableStock: product._count.cardInventory,
     };
