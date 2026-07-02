@@ -7,6 +7,7 @@ import { NotFoundException } from '@nestjs/common';
 describe('OrdersService', () => {
   let service: OrdersService;
   let prisma: any;
+  let txMock: any;
 
   const mockProduct = {
     id: 'prod-1',
@@ -30,8 +31,8 @@ describe('OrdersService', () => {
   };
 
   beforeEach(async () => {
-    const txMock = {
-      product: { findUniqueOrThrow: jest.fn().mockResolvedValue(mockProduct) },
+    txMock = {
+      product: { findUnique: jest.fn().mockResolvedValue(mockProduct) },
       order: { create: jest.fn().mockResolvedValue(mockOrder) },
     };
 
@@ -94,6 +95,17 @@ describe('OrdersService', () => {
       await service.create(dto);
 
       expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when a product does not exist', async () => {
+      txMock.product.findUnique.mockResolvedValue(null);
+
+      const dto = {
+        items: [{ productId: 'nonexistent-id', quantity: 1 }],
+        contactEmail: 'buyer@example.com',
+      };
+
+      await expect(service.create(dto)).rejects.toThrow(NotFoundException);
     });
   });
 

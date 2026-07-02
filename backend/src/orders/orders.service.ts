@@ -21,9 +21,14 @@ export class OrdersService {
       // Calculate totals and validate products exist
       const orderItems = await Promise.all(
         dto.items.map(async (item) => {
-          const product = await tx.product.findUniqueOrThrow({
+          const product = await tx.product.findUnique({
             where: { id: item.productId },
           });
+          if (!product) {
+            throw new NotFoundException(
+              `Product not found: ${item.productId}`,
+            );
+          }
           return {
             productId: item.productId,
             quantity: item.quantity,
