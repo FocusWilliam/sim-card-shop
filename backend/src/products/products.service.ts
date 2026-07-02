@@ -6,7 +6,7 @@ import { ProductStatus, Prisma } from '@prisma/client';
 
 const CACHE_TTL = 300; // 5 minutes
 
-interface ProductListItem {
+export interface ProductListItem {
   id: string;
   name: string;
   nameEn: string | null;
@@ -20,7 +20,7 @@ interface ProductListItem {
   imageUrl: string | null;
 }
 
-interface ProductListResult {
+export interface ProductListResult {
   items: ProductListItem[];
   pagination: {
     page: number;
@@ -34,7 +34,7 @@ type ProductWithCount = Prisma.ProductGetPayload<{
   include: { _count: { select: { cardInventory: true } } };
 }>;
 
-type ProductDetailResult = ProductWithCount & { availableStock: number };
+export type ProductDetailResult = ProductWithCount & { availableStock: number };
 
 @Injectable()
 export class ProductsService {
