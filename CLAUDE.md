@@ -26,10 +26,10 @@ E-commerce platform for prepaid SIM card sales. Full-stack: NestJS backend + Nex
 
 ## Git Workflow
 - main = production (protected, only merge via PR)
-- dev = staging
+- dev = integration branch (lint & test only, no deploy — single EC2)
 - feature/* = development branches
 - Always create feature branch: git checkout -b feature/xxx
-- Push triggers CI (lint, test, build, deploy)
+- Push triggers CI (lint, test); merge to main triggers build + deploy
 
 ## Deployment
 - CI builds Docker images and pushes to ghcr.io

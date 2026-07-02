@@ -1,19 +1,19 @@
 name: CI/CD Pipeline
 
 # ============================================================
-# Git Branching Strategy:
+# Git Branching Strategy (single EC2 — production only):
 #
 #   feature/xxx  →  PR →  dev  →  PR →  main (production)
 #
-#   - feature/*    : daily development, push freely
-#   - dev          : integration branch, auto-deploys to staging
-#   - main         : production, only merged via PR from dev
+#   - feature/*    : daily development, push freely (lint & test)
+#   - dev          : integration branch (lint & test, no deploy)
+#   - main         : production, deploys to the EC2 instance
 #
 # Workflow:
 #   1. Create feature branch:  git checkout -b feature/add-payment
 #   2. Develop & push:         git push origin feature/add-payment
 #   3. Open PR → dev:          triggers lint & test
-#   4. Merge to dev:           triggers build + deploy to staging
+#   4. Merge to dev:           triggers lint & test (integration check)
 #   5. Open PR → main:         triggers lint & test again
 #   6. Merge to main:          triggers build + deploy to production
 # ============================================================
@@ -71,8 +71,8 @@ jobs:
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: test
-    # Only build on push to dev or main (not on PRs or feature branches)
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    # Only build on push to main (production); PRs, dev and feature branches skip
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
@@ -87,11 +87,7 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "env_tag=production" >> $GITHUB_OUTPUT
-          else
-            echo "env_tag=staging" >> $GITHUB_OUTPUT
-          fi
+          echo "env_tag=production" >> $GITHUB_OUTPUT
           echo "image_prefix=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry
@@ -142,27 +138,3 @@ jobs:
 
             docker image prune -f
             echo "✅ Production deployed at $(date)"
-
-  # ==================== Deploy to Staging (dev only) ====================
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
-    environment: staging
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /opt/sim-card-shop
-            git fetch origin dev
-            git checkout dev
-            git pull origin dev
-            docker compose -f docker-compose.cloud.yml up -d --build --remove-orphans
-            docker image prune -f
-            echo "✅ Staging deployed at $(date)"
